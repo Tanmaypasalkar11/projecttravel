@@ -1,4 +1,3 @@
-// ✅ Updated `ChatBox.tsx`
 "use client"
 import React, { useEffect, useRef, useState } from 'react'
 import Chatform from './Chatform'
@@ -10,21 +9,22 @@ const ChatBox = () => {
   const [joined, setJoined] = useState(false)
   const [messages, setMessages] = useState<{ sender: string; message: string; isOwnMessage: boolean }[]>([])
   const [userName, setUserName] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
+  const [typingUser, setTypingUser] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleUserJoined = (message: string) => {
-      setMessages((prev) => [...prev, { sender: "System", message, isOwnMessage: false }])
+      setMessages((prev) => [...prev, { sender: "System", message: `💬 ${message}`, isOwnMessage: false }])
     }
 
     const handleMessage = (data: { sender: string; message: string }) => {
       setMessages((prev) => [...prev, { ...data, isOwnMessage: false }])
     }
 
-    const handleTyping = () => {
-      setIsTyping(true)
-      setTimeout(() => setIsTyping(false), 2000)
+    const handleTyping = (sender: string) => {
+      if (sender === userName) return
+      setTypingUser(sender)
+      setTimeout(() => setTypingUser(""), 2000)
     }
 
     socket.on("User_Joined", handleUserJoined)
@@ -36,7 +36,7 @@ const ChatBox = () => {
       socket.off("message", handleMessage)
       socket.off("typing", handleTyping)
     }
-  }, [])
+  }, [userName])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -84,23 +84,33 @@ const ChatBox = () => {
       ) : (
         <div className='w-full max-w-2xl mx-auto'>
           <h1 className='mb-4 font-bold text-2xl'>Room: {room}</h1>
-          <div className='h-[500px] overflow-y-auto p-4 mb-4 bg-gray-200 border-2 rounded-lg'>
+          <div className='h-[500px] overflow-y-auto p-4 mb-4 bg-gray-100 border border-gray-300 rounded-2xl shadow-inner'>
             {messages.map((msg, index) => (
-              <ChatMessage
-                key={index}
-                sender={msg.sender}
-                message={msg.message}
-                isOwnMessage={msg.isOwnMessage}
-              />
+              msg.sender === "System" ? (
+                <div key={index} className="text-center text-white bg-gray-800 px-4 py-1 rounded-full mb-3 text-sm w-fit mx-auto shadow">
+                  {msg.message}
+                </div>
+              ) : (
+                <ChatMessage
+                  key={index}
+                  sender={msg.sender}
+                  message={msg.message}
+                  isOwnMessage={msg.isOwnMessage}
+                />
+              )
             ))}
             <div ref={messagesEndRef} />
-            {isTyping && <p className="text-sm italic text-gray-500">Someone is typing...</p>}
+            {typingUser && (
+              <p className="text-sm italic text-gray-500 animate-pulse mt-2">
+                {typingUser} is typing...
+              </p>
+            )}
           </div>
-          <Chatform onSendMessage={handleSendMessage} />
+          <Chatform onSendMessage={handleSendMessage} room={room} userName={userName} />
         </div>
       )}
     </div>
   )
 }
 
-export default ChatBox;
+export default ChatBox
