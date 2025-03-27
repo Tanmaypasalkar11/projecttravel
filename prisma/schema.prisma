@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  password  String
+  email     String   @unique
+  image     String? // Profile picture
+  createdAt DateTime @default(now())
+
+  tripGroups       TripGroup[]     @relation("GroupMembers")
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
+  sentMessages     Chat[]          @relation("SenderMessages")
+  receivedMessages Chat[]          @relation("ReceiverMessages")
+}
+
+model TripGroup {
+  id          String   @id @default(uuid())
+  destination String
+  startDate   DateTime
+  endDate     DateTime
+  groupSize   Int
+  interests   String[] // e.g. ["adventure", "foodie"]
+  createdAt   DateTime @default(now())
+  createdBy   String // User ID
+
+  members User[] @relation("GroupMembers")
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  message   String
+  timestamp DateTime @default(now())
+
+  senderId   String
+  receiverId String
+
+  sender   User @relation("SenderMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceiverMessages", fields: [receiverId], references: [id])
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     String // e.g. "pending", "accepted", "rejected"
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("SentRequests", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id])
+}
+
+model UserSession {
+  id         String    @id @default(uuid())
+  socketId   String
+  username   String
+  room       String?
+  loginTime  DateTime  @default(now())
+  logoutTime DateTime?
+}
